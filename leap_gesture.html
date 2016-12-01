@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!--
+/------------------------------------------------------------------------------\
+| Copyright (C) 2012-2013 Leap Motion, Inc. All rights reserved.               |
+| Leap Motion proprietary and confidential. Not for distribution.              |
+| Use subject to the terms of the Leap Motion SDK Agreement available at       |
+| https://developer.leapmotion.com/sdk_agreement, or another agreement         |
+| between Leap Motion and you, your company or other organization.             |
+\------------------------------------------------------------------------------/
+-->
+
+<!--
+
+See additional libraries, guides, and examples at:
+
+ - https://developer.leapmotion.com/downloads/javascript
+ - https://developer.leapmotion.com/getting-started/javascript
+ - https://developer.leapmotion.com/gallery/tags/javascript
+
+-->
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Leap Motion JavaScript Sample</title>
+<script src="http://js.leapmotion.com/leap-0.6.3.min.js"></script>
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.2.5.js"></script>
+<script>
+  // ######### LEAP MOTION ################
+
+  // Store frame for motion functions
+  var previousFrame = null;
+  var paused = false;
+  var pauseOnGesture = false;
+
+  // Setup Leap loop with frame callback function
+  var controllerOptions = {enableGestures: true};
+
+  // to use HMD mode:
+  // controllerOptions.optimizeHMD = true;
+
+  Leap.loop(controllerOptions, function(frame) {
+    if (paused) {
+      return; // Skip this update
+    }
+    // Display Gesture object data
+    var gestureOutput = document.getElementById("gestureData");
+    var gestureString = "";
+    if (frame.gestures.length > 0) {
+      if (pauseOnGesture) {
+        togglePause();
+      }
+      for (var i = 0; i < frame.gestures.length; i++) {
+        var gesture = frame.gestures[i];
+        gestureString += "Gesture ID: " + gesture.id + ", "
+                      + "type: " + gesture.type + ", "
+                      + "state: " + gesture.state + ", "
+                      + "hand IDs: " + gesture.handIds.join(", ") + ", "
+                      + "pointable IDs: " + gesture.pointableIds.join(", ") + ", "
+                      + "duration: " + gesture.duration + " &micro;s, ";
+
+        switch (gesture.type) {
+          case "circle":
+            gestureString += "center: " + vectorToString(gesture.center) + " mm, "
+                          + "normal: " + vectorToString(gesture.normal, 2) + ", "
+                          + "radius: " + gesture.radius.toFixed(1) + " mm, "
+                          + "progress: " + gesture.progress.toFixed(2) + " rotations";
+            break;
+          case "swipe":
+            gestureString += "start position: " + vectorToString(gesture.startPosition) + " mm, "
+                          + "current position: " + vectorToString(gesture.position) + " mm, "
+                          + "direction: " + vectorToString(gesture.direction, 1) + ", "
+                          + "speed: " + gesture.speed.toFixed(1) + " mm/s";
+            break;
+          case "screenTap":
+          case "keyTap":
+            gestureString += "position: " + vectorToString(gesture.position) + " mm";
+            break;
+          default:
+            gestureString += "unkown gesture type";
+        }
+        publishMessage(gestureString);
+        togglePause()
+        break;
+        gestureString += "<br />";
+      }
+    }
+    else {
+      gestureString += "No gestures";
+    }
+    gestureOutput.innerHTML = gestureString;
+
+    // Store frame for motion functions
+    previousFrame = frame;
+  })
+
+  function vectorToString(vector, digits) {
+    if (typeof digits === "undefined") {
+      digits = 1;
+    }
+    return "(" + vector[0].toFixed(digits) + ", "
+               + vector[1].toFixed(digits) + ", "
+               + vector[2].toFixed(digits) + ")";
+  }
+
+  function togglePause() {
+    paused = !paused;
+
+    if (paused) {
+      document.getElementById("pause").innerText = "Resume";
+    } else {
+      document.getElementById("pause").innerText = "Pause";
+    }
+  }
+
+  function pauseForGestures() {
+    if (document.getElementById("pauseOnGesture").checked) {
+      pauseOnGesture = true;
+    } else {
+      pauseOnGesture = false;
+    }
+  }
+
+  // ############### PUBNUB #####################
+
+  var channel = "leap_motion_gesture_channel"
+
+  var pubnub = new PubNub({
+      publishKey : 'pub-c-3d6b5072-f825-4fad-9a0f-099fc2cd6a4d',
+      subscribeKey : 'sub-c-5d82d684-ac53-11e6-b6b9-0619f8945a4f'
+  })
+     
+  function publishSampleMessage() {
+      console.log("Since we're publishing on subscribe connectEvent, we're sure we'll receive the following publish.");
+      var publishConfig = {
+          channel : channel,
+          message : "Leap motion sensor connected to channel!"
+      }
+      pubnub.publish(publishConfig, function(status, response) {
+          console.log(status, response);
+      })
+  }
+
+  function publishMessage(message) {
+    var publishConfig = {
+      channel: channel,
+      message: message
+    }
+    pubnub.publish(publishConfig, function(status, resposne) {
+      console.log(status, response);
+    })
+  }
+     
+  pubnub.addListener({
+      status: function(statusEvent) {
+          if (statusEvent.category === "PNConnectedCategory") {
+              publishSampleMessage();
+          }
+      },
+      message: function(message) {
+          console.log("New Message!!", message);
+          if (message.message == "parsing_done" && document.getElementById("pause").innerText == "Resume") {
+            togglePause();
+          }
+      },
+      presence: function(presenceEvent) {
+          // handle presence
+      }
+  })      
+  console.log("Subscribing..");
+  pubnub.subscribe({
+      channels: [channel]
+  });
+</script>
+</head>
+<body>
+<h1>Leap Motion JavaScript Sample</h1>
+<div id="main">
+  <button id="pause" onclick="togglePause()">Pause</button>
+  <input type="checkbox" id="pauseOnGesture" onclick="pauseForGestures()">Pause on gesture</input>
+  <h3>Gesture data:</h3>
+  <div id="gestureData"></div>
+  <div style="clear:both;"></div>
+</div>
+</body>
+</html>
