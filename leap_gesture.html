@@ -39,10 +39,16 @@ See additional libraries, guides, and examples at:
   // to use HMD mode:
   // controllerOptions.optimizeHMD = true;
 
+  var keepAliveSignal = "LED_ping";
+
+  var fakeTimerCounter = 0;
+  var TIMER_LIMIT = 43;
+
   Leap.loop(controllerOptions, function(frame) {
     if (paused) {
       return; // Skip this update
     }
+    fakeTimerCounter += 1;
     // Display Gesture object data
     var gestureOutput = document.getElementById("gestureData");
     var gestureString = "";
@@ -81,12 +87,17 @@ See additional libraries, guides, and examples at:
         }
         publishMessage(gestureString);
         togglePause()
+        fakeTimerCounter = TIMER_LIMIT;
         break;
         gestureString += "<br />";
       }
     }
     else {
       gestureString += "No gestures";
+      if (fakeTimerCounter >= TIMER_LIMIT) {
+        publishMessage(keepAliveSignal);
+        fakeTimerCounter = 0;
+      }
     }
     gestureOutput.innerHTML = gestureString;
 
@@ -158,8 +169,8 @@ See additional libraries, guides, and examples at:
           }
       },
       message: function(message) {
-          console.log("New Message!!", message);
-          if (message.message == "parsing_done" && document.getElementById("pause").innerText == "Resume") {
+          console.log("New Message!!", message.message);
+          if (message.message == "resume" && document.getElementById("pause").innerText == "Resume") {
             togglePause();
           }
       },
