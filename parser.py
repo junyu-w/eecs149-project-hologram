@@ -1,4 +1,5 @@
 def parse_message(text):
+                # Parse message to extract specific swipe data we need
 	result_hash = {}	
 	splitted_text = text.split(',')
 	for idx, element in enumerate(splitted_text):
