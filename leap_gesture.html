@@ -9,20 +9,10 @@
 \------------------------------------------------------------------------------/
 -->
 
-<!--
-
-See additional libraries, guides, and examples at:
-
- - https://developer.leapmotion.com/downloads/javascript
- - https://developer.leapmotion.com/getting-started/javascript
- - https://developer.leapmotion.com/gallery/tags/javascript
-
--->
-
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<title>Leap Motion JavaScript Sample</title>
+<title>Hologram JavaScript Client</title>
 <script src="http://js.leapmotion.com/leap-0.6.3.min.js"></script>
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.2.5.js"></script>
 <script>
@@ -36,17 +26,18 @@ See additional libraries, guides, and examples at:
   // Setup Leap loop with frame callback function
   var controllerOptions = {enableGestures: true};
 
-  // to use HMD mode:
-  // controllerOptions.optimizeHMD = true;
+  // Control signals
+  let keepAliveSignal = "LED_ping";
+  let resumeSignal = "resume";
 
-  var keepAliveSignal = "LED_ping";
-
+  // Keep alive signal timer
   var fakeTimerCounter = 0;
   var TIMER_LIMIT = 43;
 
+  // loop to detect gestures continually
   Leap.loop(controllerOptions, function(frame) {
     if (paused) {
-      return; // Skip this update
+      return;
     }
     fakeTimerCounter += 1;
     // Display Gesture object data
@@ -134,15 +125,17 @@ See additional libraries, guides, and examples at:
 
   // ############### PUBNUB #####################
 
-  var channel = "leap_motion_gesture_channel"
+  let channel = "leap_motion_gesture_channel"
+  let publishKey = 'pub-c-3d6b5072-f825-4fad-9a0f-099fc2cd6a4d';
+  let subscribeKey = 'sub-c-5d82d684-ac53-11e6-b6b9-0619f8945a4f'
 
   var pubnub = new PubNub({
-      publishKey : 'pub-c-3d6b5072-f825-4fad-9a0f-099fc2cd6a4d',
-      subscribeKey : 'sub-c-5d82d684-ac53-11e6-b6b9-0619f8945a4f'
+      publishKey : publishKey,
+      subscribeKey : subscribeKey
   })
-     
-  function publishSampleMessage() {
-      console.log("Since we're publishing on subscribe connectEvent, we're sure we'll receive the following publish.");
+    
+  // publish connection message when client successfully subscribed to channel 
+  function publishConnectionMessage() {
       var publishConfig = {
           channel : channel,
           message : "Leap motion sensor connected to channel!"
@@ -152,6 +145,7 @@ See additional libraries, guides, and examples at:
       })
   }
 
+  // publish custom messages to connected channel
   function publishMessage(message) {
     var publishConfig = {
       channel: channel,
@@ -161,21 +155,19 @@ See additional libraries, guides, and examples at:
       console.log(status, response);
     })
   }
-     
+  
+  // add subscriber as callback listener
   pubnub.addListener({
       status: function(statusEvent) {
           if (statusEvent.category === "PNConnectedCategory") {
-              publishSampleMessage();
+              publishConnectionMessage();
           }
       },
       message: function(message) {
-          console.log("New Message!!", message.message);
-          if (message.message == "resume" && document.getElementById("pause").innerText == "Resume") {
+          console.log("New Message: ", message.message);
+          if (message.message == resumeSignal && document.getElementById("pause").innerText == "Resume") {
             togglePause();
           }
-      },
-      presence: function(presenceEvent) {
-          // handle presence
       }
   })      
   console.log("Subscribing..");
@@ -185,7 +177,7 @@ See additional libraries, guides, and examples at:
 </script>
 </head>
 <body>
-<h1>Leap Motion JavaScript Sample</h1>
+<h1>Hologram JavaScript Client</h1>
 <div id="main">
   <button id="pause" onclick="togglePause()">Pause</button>
   <input type="checkbox" id="pauseOnGesture" onclick="pauseForGestures()">Pause on gesture</input>

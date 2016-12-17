@@ -31,7 +31,9 @@ ex3d = [c, d, c, d, c, d, c, d]
 # data_structure import
 line, current_shape_num = shapes.next_shape(3)
 
-# output functions
+'''
+initialize LED cube
+'''
 def initialize_cube():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
@@ -41,15 +43,25 @@ def initialize_cube():
     print "cube initialized"
     return line
 
+'''
+turn off lights at all layers
+'''
 def all_layers_off():
     for i in LAYERS:
         GPIO.output(i, GPIO.LOW)
 
+'''
+turn on lights at a specific layer
+'''
 def select_layer(layer_num):
     for i in LAYERS:
         GPIO.output(i, GPIO.LOW)
     GPIO.output(LAYERS[layer_num], GPIO.HIGH)
 
+'''
+write to each face (vertical LED layer) register, then 
+select a layer to display the layer
+'''
 def write_to_register(data, face):
     for i in range(8):
         if data[i]:
@@ -59,10 +71,16 @@ def write_to_register(data, face):
     GPIO.output(FACES[face], GPIO.HIGH)
     GPIO.output(FACES[face], GPIO.LOW)
 
+'''
+write a 2d object
+'''
 def write_layer(data2d, layer):
     for i in range(8):
         write_to_register(data2d[i], i)
 
+'''
+write a 3d object through displaying each layer for 0.001 seconds
+'''
 def write_3d(data3d):
     for i in range(8):
         write_layer(data3d[i], i)
@@ -70,11 +88,17 @@ def write_3d(data3d):
         time.sleep(0.001)
         all_layers_off()
 
+'''
+display a 3d object for t/0.008 times
+'''
 def display_3d(data3d, t):
     while t>0:
         write_3d(data3d)
         t-=.008
 
+'''
+display 3d rotation
+'''
 def display_3d_rot(data3d, speed, direction):
     rotational_direction = 1
     if direction <= 0:
@@ -82,20 +106,23 @@ def display_3d_rot(data3d, speed, direction):
     if speed < 100:
         speed = 100
     step = int(((speed-100) * 23 / 300)) + 2
-    print speed, step
-    
     for j in range(0, 360, step):
 		to_display = []
 		for i in range(8):
 			to_display.append(rotate(data3d[i], rotational_direction*j, reshape=False))
 		display_3d(to_display, float(2)/360)
 
+'''
+change to the next shape to display
+'''
 def change_shape():
     global line, current_shape_num
     line, current_shape_num = shapes.next_shape(current_shape_num)
-    print current_shape_num
     return line
 
+'''
+display special effect
+'''
 def explosion():
     lst = [shapes.s0, shapes.s1, shapes.s2, shapes.s3, shapes.s4, shapes.s3, shapes.s2, shapes.s1]
     lst = lst*4
